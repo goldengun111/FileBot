@@ -1,6 +1,26 @@
 bin
 build
 
+cache
+cache/**
+dist
+release
+ivy
+QuickLook
+*.txt
+*.psm
+
+makefile
+makefile.variables
+profile.properties
+
+.project
+.classpath
+.settings
+.externalToolBuilders
+
+.DS_Store
+
 dist
 release
 

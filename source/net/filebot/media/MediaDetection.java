@@ -414,6 +414,14 @@ public class MediaDetection {
 		// match common word sequence and clean detected word sequence from unwanted elements
 		Set<String> queries = new LinkedHashSet<String>();
 
+		// use the filename prefix before SxE as the primary series query
+		for (File file : files) {
+			String seriesName = strictSeriesNameMatcher.matchByEpisodeIdentifier(getName(file));
+			if (seriesName != null && seriesName.length() > 0) {
+				queries.add(normalizePunctuation(seriesName));
+			}
+		}
+
 		// check for known pattern matches
 		for (boolean strict : new boolean[] { true, false }) {
 			if (queries.isEmpty()) {

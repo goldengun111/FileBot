@@ -154,7 +154,7 @@ class EpisodeListMatcher implements AutoCompleteMatcher {
 		// require user input if auto-detection has failed or has been disabled
 		if (episodes.isEmpty() && !strict) {
 			List<String> detectedSeriesNames = detectSeriesNames(files, anime, locale);
-			String suggestion = detectedSeriesNames.size() > 0 ? join(detectedSeriesNames, "; ") : normalizePunctuation(getName(files.get(0)));
+			String suggestion = detectedSeriesNames.size() > 0 ? join(detectedSeriesNames, "; ") : getSeriesQuery(files.get(0));
 
 			synchronized (inputMemory) {
 				List<String> input = inputMemory.get(suggestion);
@@ -195,10 +195,11 @@ class EpisodeListMatcher implements AutoCompleteMatcher {
 		List<Future<List<Episode>>> tasks = querySet.stream().map(q -> {
 			return requestThreadPool.submit(() -> {
 				// select search result
-				List<SearchResult> options = provider.search(q, locale);
+				String searchQuery = getSeriesQuery(q);
+				List<SearchResult> options = provider.search(searchQuery, locale);
 
 				if (options.size() > 0) {
-					SearchResult selectedSearchResult = selectSearchResult(files, q, options, autodetection, parent);
+					SearchResult selectedSearchResult = selectSearchResult(files, searchQuery, options, autodetection, parent);
 					if (selectedSearchResult != null) {
 						return provider.getEpisodeList(selectedSearchResult, sortOrder, locale);
 					}
@@ -213,6 +214,15 @@ class EpisodeListMatcher implements AutoCompleteMatcher {
 			episodes.addAll(it.get());
 		}
 		return episodes;
+	}
+
+	private String getSeriesQuery(File file) {
+		return getSeriesQuery(getName(file));
+	}
+
+	private String getSeriesQuery(String query) {
+		String seriesName = getSeriesNameMatcher(true).matchByEpisodeIdentifier(query);
+		return seriesName == null ? normalizePunctuation(query) : normalizePunctuation(seriesName);
 	}
 
 	protected SearchResult selectSearchResult(List<File> files, String query, List<SearchResult> options, boolean autodetection, Component parent) throws Exception {

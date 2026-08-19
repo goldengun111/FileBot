@@ -2,6 +2,7 @@ package net.filebot.media;
 
 import static java.util.Collections.*;
 import static org.junit.Assert.*;
+import static net.filebot.util.StringUtilities.*;
 
 import java.io.File;
 import java.util.Locale;
@@ -25,6 +26,14 @@ public class MediaDetectionTest {
 	@Test
 	public void detectSeriesName() throws Exception {
 		assertEquals("[]", MediaDetection.detectSeriesNames(singleton(new File("Movie/LOTR.2001.AVC-1080")), false, Locale.ENGLISH).toString());
+	}
+
+	@Test
+	public void detectSeriesNameBeforeReleaseInfo() {
+		String name = "Ted.Lasso.S04E03.1080p.HEVC.x265-MeGusta[EZTVx.to].mkv";
+		String seriesName = MediaDetection.getSeriesNameMatcher(true).matchByEpisodeIdentifier(name);
+
+		assertEquals("Ted Lasso", normalizePunctuation(seriesName));
 	}
 
 	@Test
