@@ -421,10 +421,41 @@ public class CmdlineOperations implements CmdlineInterface {
 		for (File file : movieMatchFiles) {
 			Movie movie = movieByFile.get(file);
 
-			// unknown hash, try via imdb id from nfo file
+			// unknown hash, try via filename / online lookup / legacy detection
 			if (movie == null) {
 				log.fine(format("Auto-detect movie from context: [%s]", file));
-				List<Movie> options = detectMovieWithYear(file, service, locale, strict);
+
+				String movieQuery = getName(file);
+				List<Movie> options = emptyList();
+
+				// Modern fallback: derive a clean "Name Year" query locally and ask the selected
+				// movie service directly. This avoids relying on legacy FileBot movie indexes
+				// and release-info services that may no longer be available.
+				try {
+					String reducedQuery = reduceMovieName(movieQuery, false);
+					if (reducedQuery != null) {
+						movieQuery = reducedQuery;
+					}
+
+					// Preserve strict mode semantics: require a recognizable movie year.
+					List<Integer> movieYears = parseMovieYear(movieQuery);
+					if (!strict || !movieYears.isEmpty()) {
+						log.fine(format("Auto-detected movie query: [%s]", movieQuery));
+						options = service.searchMovie(movieQuery, locale);
+
+						if (strict && !movieYears.isEmpty()) {
+							options = options.stream().filter(m -> movieYears.contains(m.getYear())).collect(toList());
+						}
+					}
+				} catch (Exception e) {
+					log.finer(format("Direct movie lookup failed: %s", cause(e)));
+				}
+
+				// Fall back to the original 4.8.5 detection logic for unusual filenames,
+				// NFO / xattr metadata, other movie services, etc.
+				if (options == null || options.isEmpty()) {
+					options = detectMovieWithYear(file, service, locale, strict);
+				}
 
 				// ignore files that cannot yield any acceptable matches (e.g. movie files without year in strict mode)
 				if (options == null) {
@@ -445,7 +476,7 @@ public class CmdlineOperations implements CmdlineInterface {
 				try {
 					// select first element if matches are reliable
 					if (options.size() > 0) {
-						movie = selectSearchResult(stripReleaseInfo(getName(file)), options);
+						movie = selectSearchResult(movieQuery, options);
 
 						// make sure to get the language-specific movie object for the selected option
 						movie = getLocalizedMovie(service, movie, locale);
