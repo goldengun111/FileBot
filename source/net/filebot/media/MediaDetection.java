@@ -413,12 +413,17 @@ public class MediaDetection {
 
 		// match common word sequence and clean detected word sequence from unwanted elements
 		Set<String> queries = new LinkedHashSet<String>();
+		Set<String> filenamePrefixQueries = new LinkedHashSet<String>();
 
 		// use the filename prefix before SxE as the primary series query
+		// treat this as a high-confidence query so legitimate show names that happen
+		// to occur in the release-info blacklist (e.g. "Silo") are not discarded
 		for (File file : files) {
 			String seriesName = strictSeriesNameMatcher.matchByEpisodeIdentifier(getName(file));
 			if (seriesName != null && seriesName.length() > 0) {
-				queries.add(normalizePunctuation(seriesName));
+				String normalizedSeriesName = normalizePunctuation(seriesName);
+				filenamePrefixQueries.add(normalizedSeriesName);
+				queries.add(normalizedSeriesName);
 			}
 		}
 
@@ -465,7 +470,9 @@ public class MediaDetection {
 
 		debug.finest(format("Match Series Name => %s %s", unids, queries));
 
-		List<String> querySet = getUniqueQuerySet(unids, queries);
+		List<String> exactQueries = new ArrayList<String>(unids);
+		exactQueries.addAll(filenamePrefixQueries);
+		List<String> querySet = getUniqueQuerySet(exactQueries, queries);
 		debug.finest(format("Query Series => %s", querySet));
 		return querySet;
 	}
